@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<style>
+  :root {
+    --page: #f1ece0;
+    --surface: #faf7f0;
+    --ink: #1c1917;
+    --ink-2: #57534e;
+    --muted: #8a857c;
+    --hairline: #e5dfd2;
+    --baseline: #cfc8b8;
+    --teal: #0c8975;
+    --teal-track: #d9ebe6;
+    --brass: #a16207;
+    --brass-track: #ede3cb;
+    --ring: rgba(28, 25, 23, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #121110;
+      --surface: #1b1917;
+      --ink: #f5f2ea;
+      --ink-2: #b8b2a6;
+      --muted: #8a857c;
+      --hairline: #2c2a26;
+      --baseline: #3a3733;
+      --teal: #12a191;
+      --teal-track: #17342f;
+      --brass: #c08a12;
+      --brass-track: #352d17;
+      --ring: rgba(245, 242, 234, 0.10);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 32px 16px 48px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; display: grid; gap: 16px; }
+
+  header.masthead {
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; padding: 0 4px;
+  }
+  .wordmark { font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+  .wordmark .gear { color: var(--brass); }
+  .buildchip { font-size: 12px; color: var(--muted); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--ring);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+
+  .identity h1 { font-size: 22px; font-weight: 650; }
+  .identity .sub { color: var(--ink-2); font-size: 14px; margin-top: 2px; }
+
+  .tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px; margin-top: 20px;
+  }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .tile .note { font-size: 12px; color: var(--ink-2); }
+  .tile.hero .value { font-size: 52px; font-weight: 650; line-height: 1.1; letter-spacing: -0.01em; }
+
+  h2 {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px;
+  }
+
+  .chart { display: grid; gap: 8px; }
+  .row {
+    /* The trailing 110px column reserves space so tip labels never clip,
+       even on a full-width bar. */
+    display: grid; grid-template-columns: 170px 1fr 110px; align-items: center;
+    gap: 0 12px; min-height: 20px;
+  }
+  .row .track { grid-column: 2; }
+  .row .name {
+    font-size: 13px; color: var(--ink-2); text-align: right;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .track { position: relative; height: 16px; border-left: 1px solid var(--baseline); }
+  .track.metered { background: var(--teal-track); border-radius: 0 4px 4px 0; border-left: none; }
+  .track.metered.brass { background: var(--brass-track); }
+  .bar {
+    position: absolute; inset: 0 auto 0 0; height: 16px;
+    background: var(--teal); border-radius: 0 4px 4px 0;
+  }
+  .bar.brass { background: var(--brass); }
+  .tip {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-size: 12px; color: var(--ink-2); white-space: nowrap; padding-left: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th {
+    text-align: left; font-size: 12px; font-weight: 600; color: var(--muted);
+    border-bottom: 1px solid var(--hairline); padding: 4px 8px 8px;
+  }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--hairline); }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+  details { font-size: 13px; color: var(--ink-2); }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  details code {
+    display: block; margin-top: 8px; word-break: break-all;
+    font-size: 12px; background: var(--page); padding: 10px; border-radius: 6px;
+  }
+
+  footer { text-align: center; font-size: 12px; color: var(--muted); }
+
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--ink); color: var(--page);
+    font-size: 12px; padding: 6px 10px; border-radius: 6px; max-width: 260px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <span class="wordmark"><span class="gear">⚙</span> spanner</span>
+    <span class="buildchip">SimulationCraft {{.SimCVersion}} · {{.BuildDate}}</span>
+  </header>
+
+  <section class="card identity">
+    <h1>{{.Player.Name}}</h1>
+    <div class="sub">{{.Player.Spec}} · {{.Player.Race}} · Level {{.Player.Level}}</div>
+    <div class="tiles">
+      <div class="tile hero">
+        <div class="label">Damage per second</div>
+        <div class="value">{{.Player.DPS}}</div>
+        <div class="note">± {{.Player.DPSErr}} · range {{.Player.DPSMin}}–{{.Player.DPSMax}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Damage taken per second</div>
+        <div class="value">{{.Player.DTPS}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Self-healing per second</div>
+        <div class="value">{{.Player.HPS}}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Fight length</div>
+        <div class="value">{{.FightLength}}</div>
+        <div class="note">{{.Iterations}} iterations · {{.ErrorPct}} error</div>
+      </div>
+    </div>
+  </section>
+
+  {{if .Player.Abilities}}
+  <section class="card">
+    <h2>Damage by ability</h2>
+    <div class="chart">
+      {{range .Player.Abilities}}
+      <div class="row" data-tip="{{.Executes}} casts per fight · {{.PerExec}} per cast">
+        <span class="name">{{.Label}}</span>
+        <div class="track">
+          <div class="bar" style="width: {{printf "%.2f" .WidthPct}}%"></div>
+          <span class="tip" style="left: {{printf "%.2f" .WidthPct}}%">{{.DPS}} · {{.Pct}}</span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </section>
+  {{end}}
+
+  {{if .Player.Buffs}}
+  <section class="card">
+    <h2>Buff uptime</h2>
+    <div class="chart">
+      {{range .Player.Buffs}}
+      <div class="row">
+        <span class="name">{{.Label}}</span>
+        <div class="track metered brass">
+          <div class="bar brass" style="width: {{printf "%.2f" .Uptime}}%"></div>
+          <span class="tip" style="left: {{printf "%.2f" .Uptime}}%">{{.UptimeStr}}</span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </section>
+  {{end}}
+
+  {{if .Player.Gear}}
+  <section class="card">
+    <h2>Equipped gear</h2>
+    <table>
+      <thead><tr><th>Slot</th><th>Item</th><th style="text-align:right">Item level</th></tr></thead>
+      <tbody>
+        {{range .Player.Gear}}
+        <tr><td>{{.Slot}}</td><td>{{.Name}}</td><td class="num">{{.ILevel}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+  {{end}}
+
+  {{if .Player.Talents}}
+  <section class="card">
+    <details>
+      <summary>Talent string</summary>
+      <code>{{.Player.Talents}}</code>
+    </details>
+  </section>
+  {{end}}
+
+  <footer>
+    Report generated {{.GeneratedAt}} by spanner · sim ran in {{.Elapsed}} ·
+    SimC {{.SimCVersion}} ({{.GitRevision}})
+  </footer>
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+<script>
+  (function () {
+    var tip = document.getElementById("tooltip");
+    document.querySelectorAll(".row[data-tip]").forEach(function (row) {
+      row.addEventListener("mousemove", function (e) {
+        tip.textContent = row.getAttribute("data-tip");
+        tip.style.display = "block";
+        tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + "px";
+        tip.style.top = (e.clientY + 14) + "px";
+      });
+      row.addEventListener("mouseleave", function () {
+        tip.style.display = "none";
+      });
+    });
+  })();
+</script>
+</body>
+</html>
