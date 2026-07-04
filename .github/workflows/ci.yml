@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Install tools
+        run: make tools
+
+      - name: Format check
+        run: make fmt-check
+
+      - name: Vet
+        run: make vet
+
+      - name: Lint (staticcheck)
+        run: make lint
+
+      - name: Security scan (gosec)
+        run: make sec
+
+      - name: Vulnerability scan (govulncheck)
+        run: make vuln
+
+      - name: Test (race + coverage)
+        run: make test
+
+      - name: Build
+        run: make build

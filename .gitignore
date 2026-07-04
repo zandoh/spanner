@@ -1,0 +1,13 @@
+# Build output
+/bin/
+
+# Test and coverage artifacts
+coverage.out
+coverage.html
+
+# Generated sim reports and SimC outputs (local runs)
+/reports/
+*.simc.json
+
+# OS noise
+.DS_Store
