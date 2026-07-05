@@ -51,6 +51,22 @@ func TestParseFixture(t *testing.T) {
 		t.Errorf("fight_length mean = %v, implausibly short", cd.FightLength.Mean)
 	}
 
+	// Timelines should be per-second series roughly matching fight length.
+	if n := len(cd.TimelineDmg.Data); float64(n) < cd.FightLength.Mean-5 {
+		t.Errorf("timeline_dmg has %d points for a %.0fs fight", n, cd.FightLength.Mean)
+	}
+	if n := len(cd.TimelineDmgTaken.Data); float64(n) < cd.FightLength.Mean-5 {
+		t.Errorf("timeline_dmg_taken has %d points for a %.0fs fight", n, cd.FightLength.Mean)
+	}
+	if len(cd.ResourceTimelines) == 0 {
+		t.Error("no resource timelines parsed")
+	}
+	for _, key := range []string{"health", "runic_power"} {
+		if tl, ok := cd.ResourceTimelines[key]; !ok || len(tl.Data) == 0 {
+			t.Errorf("resource timeline %q missing or empty", key)
+		}
+	}
+
 	var damage int
 	for _, s := range p.Stats {
 		if s.Type == "damage" && s.PortionAmount > 0 {

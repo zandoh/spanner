@@ -59,15 +59,27 @@ type Player struct {
 	Buffs          []Buff          `json:"buffs"`
 }
 
-// CollectedData carries the per-iteration aggregates for an actor. DTPS and
-// HPS are collected even in DPS sims, which is what makes a future tank
-// survivability lens possible without forking SimC.
+// CollectedData carries the per-iteration aggregates for an actor. DTPS,
+// HPS, and the damage-taken/health timelines are collected even in DPS sims,
+// which is what makes a future tank survivability lens possible without
+// forking SimC.
 type CollectedData struct {
-	FightLength Sample `json:"fight_length"`
-	DPS         Sample `json:"dps"`
-	DPSe        Sample `json:"dpse"`
-	DTPS        Sample `json:"dtps"`
-	HPS         Sample `json:"hps"`
+	FightLength       Sample              `json:"fight_length"`
+	DPS               Sample              `json:"dps"`
+	DPSe              Sample              `json:"dpse"`
+	DTPS              Sample              `json:"dtps"`
+	HPS               Sample              `json:"hps"`
+	TimelineDmg       Timeline            `json:"timeline_dmg"`
+	TimelineDmgTaken  Timeline            `json:"timeline_dmg_taken"`
+	ResourceTimelines map[string]Timeline `json:"resource_timelines"`
+}
+
+// Timeline is a per-second series averaged across iterations.
+type Timeline struct {
+	Mean float64   `json:"mean"`
+	Min  float64   `json:"min"`
+	Max  float64   `json:"max"`
+	Data []float64 `json:"data"`
 }
 
 // Sample is SimC's aggregate of one collected quantity across iterations.
