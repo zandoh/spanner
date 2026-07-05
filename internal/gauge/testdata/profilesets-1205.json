@@ -1,0 +1,197 @@
+{
+ "version": "1205-01",
+ "report_version": "2.0.0",
+ "build_date": "Jun  9 2026",
+ "git_revision": "e35c129",
+ "sim": {
+  "options": {
+   "debug": false,
+   "max_time": 300.0,
+   "expected_iteration_time": 240.0,
+   "vary_combat_length": 0.2,
+   "iterations": 307,
+   "target_error": 0.0,
+   "threads": 8,
+   "seed": 18162398022089425423,
+   "single_actor_batch": false,
+   "queue_lag": 0.005,
+   "queue_lag_stddev": 0.001,
+   "gcd_lag": 0.15,
+   "gcd_lag_stddev": 0.037,
+   "channel_lag": 0.25,
+   "channel_lag_stddev": 0.062,
+   "queue_gcd_reduction": 0.1,
+   "strict_gcd_queue": false,
+   "confidence": 0.95,
+   "confidence_estimator": 1.9599639854090543,
+   "world_lag": 0.1,
+   "world_lag_stddev": 0.01,
+   "travel_variance": 0.0,
+   "default_skill": 1.0,
+   "reaction_time": 0.5,
+   "regen_periodicity": 0.25,
+   "ignite_sampling_delta": 0.2,
+   "fixed_time": true,
+   "optimize_expressions": 2,
+   "optimal_raid": 1,
+   "log": 0,
+   "debug_each": 0,
+   "stat_cache": 1,
+   "max_aoe_enemies": 20,
+   "enemy_death_pct": 0.0,
+   "challenge_mode": false,
+   "timewalk": -1,
+   "pvp_mode": false,
+   "rng": {
+    "name": "xoshiro256+"
+   },
+   "deterministic": 0,
+   "average_range": 1,
+   "average_gauss": 0,
+   "fight_style": "Patchwerk",
+   "desired_targets": 1,
+   "default_aura_delay": 0.03,
+   "default_aura_delay_stddev": 0.005,
+   "profileset_metric": "dps",
+   "profileset_multiactor_base_name": "Baseline",
+   "dbc": {
+    "Live": {
+     "build_level": 67823,
+     "wow_version": "12.0.5.67823",
+     "hotfix_date": "2026-05-28",
+     "hotfix_build": 67823,
+     "hotfix_hash": "adbae26caca65b2d6680a5fd075ff1e158ceedd56e6cb53a299527c075bebcee"
+    },
+    "PTR": {
+     "build_level": 67808,
+     "wow_version": "12.0.7.67808",
+     "hotfix_date": "2026-06-08",
+     "hotfix_build": 67808,
+     "hotfix_hash": "36f0127eaa0d7d5650bf4b8851d1a8ef5ecf5590c058855f4e0d86056ebb29c4"
+    },
+    "version_used": "Live"
+   }
+  },
+  "players": [
+   {
+    "name": "MID1_Death_Knight_Blood_San'layn",
+    "race": "mechagnome",
+    "level": 90,
+    "specialization": "Blood Death Knight",
+    "talents": "CoPAAAAAAAAAAAAAAAAAAAAAAwYWmZmxMmZmhZZmZmmZxMjxMAAAAAzMzMzwMDzYMDAjZmZGAAADMwM20YZDklBsBYGzAAAmZwgB",
+    "collected_data": {
+     "fight_length": {
+      "sum": 89638.79000000001,
+      "count": 299,
+      "mean": 299.79528428093647,
+      "min": 240.20000000000002,
+      "max": 359.2
+     },
+     "dps": {
+      "sum": 20765741.512822736,
+      "count": 299,
+      "mean": 69450.64051111283,
+      "min": 61061.06046451174,
+      "max": 77886.14290432943,
+      "median": 69601.39367655864,
+      "variance": 8474735.672242394,
+      "std_dev": 2911.139926599612,
+      "mean_variance": 28343.59756602807,
+      "mean_std_dev": 168.355568859566
+     }
+    },
+    "stats": [],
+    "gear": {},
+    "buffs": []
+   }
+  ],
+  "profilesets": {
+   "metric": "Damage per Second",
+   "results": [
+    {
+     "name": "No head gem",
+     "mean": 68320.48194793888,
+     "min": 58654.91920217815,
+     "max": 75832.00445371373,
+     "stddev": 2876.521585133048,
+     "mean_stddev": 166.35353848056403,
+     "mean_error": 326.04694426726473,
+     "median": 68479.95081494832,
+     "first_quartile": 66554.90708841401,
+     "third_quartile": 70161.8654113905,
+     "iterations": 300
+    },
+    {
+     "name": "Head +11 ilvl",
+     "mean": 69859.31168922492,
+     "min": 60985.240082205855,
+     "max": 80069.34118106375,
+     "stddev": 3314.2718540054457,
+     "mean_stddev": 191.66929017667843,
+     "mean_error": 375.66490585520717,
+     "median": 69892.87856397181,
+     "first_quartile": 67609.54122805252,
+     "third_quartile": 72204.30463164313,
+     "iterations": 300
+    }
+   ]
+  },
+  "statistics": {
+   "elapsed_cpu_seconds": 4.124651,
+   "elapsed_time_seconds": 0.655817833,
+   "init_time_seconds": 0.054566584,
+   "merge_time_seconds": 0.003808123,
+   "analyze_time_seconds": 0.001972958,
+   "simulation_length": {
+    "sum": 89638.79000000002,
+    "count": 299,
+    "mean": 299.7952842809365,
+    "min": 240.20000000000002,
+    "max": 359.2,
+    "median": 300.40000000000003,
+    "variance": 1197.9580473606557,
+    "std_dev": 34.61153055501383,
+    "mean_variance": 4.006548653380119,
+    "mean_std_dev": 2.0016364938170264
+   },
+   "total_events_processed": 12035090,
+   "raid_dps": {
+    "sum": 20765741.512822736,
+    "count": 299,
+    "mean": 69450.64051111283,
+    "min": 61061.06046451175,
+    "max": 77886.14290432943,
+    "median": 69601.39367655863,
+    "variance": 8474735.672242392,
+    "std_dev": 2911.1399265996115,
+    "mean_variance": 28343.597566028067,
+    "mean_std_dev": 168.355568859566
+   },
+   "raid_hps": {
+    "sum": 14864623.528408747,
+    "count": 299,
+    "mean": 49714.45996123327
+   },
+   "raid_aps": {
+    "sum": 8380140.93807171,
+    "count": 299,
+    "mean": 28027.227217631138
+   },
+   "total_dmg": {
+    "sum": 6233600013.996395,
+    "count": 299,
+    "mean": 20848160.581927743
+   },
+   "total_heal": {
+    "sum": 4456517318.256899,
+    "count": 299,
+    "mean": 14904740.194839127
+   },
+   "total_absorb": {
+    "sum": 2509270898.0498176,
+    "count": 299,
+    "mean": 8392210.361370627
+   }
+  }
+ }
+}

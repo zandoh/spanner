@@ -25,9 +25,30 @@ type Report struct {
 
 // Sim holds the simulation options, actors, and run statistics.
 type Sim struct {
-	Options    Options    `json:"options"`
-	Players    []Player   `json:"players"`
-	Statistics Statistics `json:"statistics"`
+	Options     Options     `json:"options"`
+	Players     []Player    `json:"players"`
+	Profilesets Profilesets `json:"profilesets"`
+	Statistics  Statistics  `json:"statistics"`
+}
+
+// Profilesets holds gear/talent comparison results; the baseline actor is
+// Players[0], candidates are the profileset variations.
+type Profilesets struct {
+	Metric  string             `json:"metric"`
+	Results []ProfilesetResult `json:"results"`
+}
+
+// ProfilesetResult is one candidate's outcome.
+type ProfilesetResult struct {
+	Name       string  `json:"name"`
+	Mean       float64 `json:"mean"`
+	Min        float64 `json:"min"`
+	Max        float64 `json:"max"`
+	StdDev     float64 `json:"stddev"`
+	MeanStdDev float64 `json:"mean_stddev"`
+	MeanError  float64 `json:"mean_error"`
+	Median     float64 `json:"median"`
+	Iterations int     `json:"iterations"`
 }
 
 // Options is the subset of sim options spanner reports on.

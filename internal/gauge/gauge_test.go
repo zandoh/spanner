@@ -94,6 +94,27 @@ func TestParseFixture(t *testing.T) {
 	}
 }
 
+// The profileset fixture is a real (trimmed) run comparing two head-slot
+// variations against the Blood DK baseline.
+func TestParseProfilesetFixture(t *testing.T) {
+	rep, err := ParseFile("testdata/profilesets-1205.json")
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	ps := rep.Sim.Profilesets
+	if len(ps.Results) != 2 {
+		t.Fatalf("results = %d, want 2", len(ps.Results))
+	}
+	for _, r := range ps.Results {
+		if r.Name == "" || r.Mean <= 0 || r.MeanError <= 0 || r.Iterations == 0 {
+			t.Errorf("incomplete result: %+v", r)
+		}
+	}
+	if base := rep.Sim.Players[0].CollectedData.DPS.Mean; base <= 0 {
+		t.Errorf("baseline dps = %v", base)
+	}
+}
+
 func TestParseRejectsNonReports(t *testing.T) {
 	for name, doc := range map[string]string{
 		"empty object": `{}`,
