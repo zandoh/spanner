@@ -21,8 +21,9 @@ import (
 var reportSrc string
 
 var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
-	"add": func(a, b float64) float64 { return a + b },
-	"sub": func(a, b float64) float64 { return a - b },
+	"add":   func(a, b float64) float64 { return a + b },
+	"sub":   func(a, b float64) float64 { return a - b },
+	"halve": func(a float64) float64 { return a / 2 },
 }).Parse(reportSrc))
 
 // Meta carries report provenance that isn't part of the sim data itself.
@@ -41,6 +42,7 @@ type page struct {
 	FightLength string
 	ErrorPct    string
 	Elapsed     string
+	Comparison  *comparisonView
 	Player      playerView
 }
 
@@ -99,6 +101,7 @@ func Render(w io.Writer, rep *gauge.Report, meta Meta) error {
 		FightLength: fmtDuration(cd.FightLength.Mean),
 		ErrorPct:    fmtErrorPct(cd.DPS),
 		Elapsed:     fmt.Sprintf("%.1fs", rep.Sim.Statistics.ElapsedTimeSeconds),
+		Comparison:  buildComparison(rep),
 		Player: playerView{
 			Name:      p.Name,
 			Spec:      p.Specialization,

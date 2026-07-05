@@ -17,6 +17,7 @@
     --teal-track: #d9ebe6;
     --brass: #a16207;
     --brass-track: #ede3cb;
+    --loss: #c23a2f;
     --ring: rgba(28, 25, 23, 0.10);
   }
   @media (prefers-color-scheme: dark) {
@@ -32,6 +33,7 @@
       --teal-track: #17342f;
       --brass: #c08a12;
       --brass-track: #352d17;
+      --loss: #e05a4e;
       --ring: rgba(245, 242, 234, 0.10);
     }
   }
@@ -99,6 +101,17 @@
   .tip {
     position: absolute; top: 50%; transform: translateY(-50%);
     font-size: 12px; color: var(--ink-2); white-space: nowrap; padding-left: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row.cmp { grid-template-columns: 170px 1fr 230px; }
+  .cmp-track { position: relative; height: 16px; }
+  .cmp-zero { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--baseline); }
+  .cmp-bar { position: absolute; top: 0; height: 16px; }
+  .cmp-bar.gain { left: 50%; background: var(--teal); border-radius: 0 4px 4px 0; }
+  .cmp-bar.loss { right: 50%; background: var(--loss); border-radius: 4px 0 0 4px; }
+  .cmp-val {
+    font-size: 12px; color: var(--ink-2); white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
 
@@ -177,6 +190,26 @@
       </div>
     </div>
   </section>
+
+  {{if .Comparison}}
+  <section class="card">
+    <h2>Comparison — {{.Comparison.Metric}} vs baseline</h2>
+    <div class="chart">
+      {{range .Comparison.Rows}}
+      <div class="row cmp" data-tip="{{.Detail}}">
+        <span class="name">{{.Label}}</span>
+        <div class="cmp-track">
+          <div class="cmp-zero"></div>
+          {{if not .IsBaseline}}
+          <div class="cmp-bar {{if .Gain}}gain{{else}}loss{{end}}" style="width: {{printf "%.2f" (halve .WidthPct)}}%"></div>
+          {{end}}
+        </div>
+        <span class="cmp-val">{{.Mean}}{{if not .IsBaseline}} · {{.Delta}}{{end}}</span>
+      </div>
+      {{end}}
+    </div>
+  </section>
+  {{end}}
 
   {{if .Player.DPSChart}}
   <section class="card">
