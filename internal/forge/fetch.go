@@ -112,7 +112,7 @@ func (f *Fetcher) client() *http.Client {
 
 func (f *Fetcher) logf(format string, args ...any) {
 	if f.Progress != nil {
-		fmt.Fprintf(f.Progress, "⚙ forge: "+format+"\n", args...)
+		_, _ = fmt.Fprintf(f.Progress, "⚙ forge: "+format+"\n", args...)
 	}
 }
 
@@ -137,7 +137,7 @@ func (f *Fetcher) getString(ctx context.Context, u string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
 		return "", err
@@ -151,7 +151,7 @@ func (f *Fetcher) download(ctx context.Context, u string) (path, sha string, err
 	if err != nil {
 		return "", "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	tmp, err := os.CreateTemp("", "spanner-forge-*")
 	if err != nil {
@@ -215,7 +215,7 @@ func copyFile(src, dst string, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm) // #nosec G304 -- paths owned by forge
 	if err != nil {
 		return err

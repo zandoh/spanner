@@ -129,6 +129,6 @@ func ParseFile(path string) (*Report, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gauge: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Parse(f)
 }

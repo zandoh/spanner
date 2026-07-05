@@ -1,0 +1,42 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - depguard
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unused
+  settings:
+    depguard:
+      rules:
+        # Strict allowlist: the standard library and spanner itself. Any new
+        # third-party dependency fails lint until it is deliberately added
+        # here — std-lib-first as a check, not a convention.
+        main:
+          list-mode: strict
+          allow:
+            - $gostd
+            - github.com/zandoh/spanner
+    staticcheck:
+      checks: ["all"]
+  exclusions:
+    rules:
+      # Tests exercise subprocesses and dynamic paths by design.
+      - path: _test\.go
+        linters: [gosec]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/zandoh/spanner

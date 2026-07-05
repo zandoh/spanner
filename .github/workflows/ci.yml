@@ -28,11 +28,8 @@ jobs:
       - name: Vet
         run: make vet
 
-      - name: Lint (staticcheck)
+      - name: Lint (golangci-lint: staticcheck, gosec, depguard)
         run: make lint
-
-      - name: Security scan (gosec)
-        run: make sec
 
       - name: Vulnerability scan (govulncheck)
         run: make vuln
