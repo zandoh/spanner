@@ -31,11 +31,18 @@ for Windows/macOS; build from source on Linux).
 
 ```sh
 make build
-./bin/spanner sim --simc /path/to/simc --profile mychar.simc
+
+# from a /simc addon export (type /simc in-game, copy, paste into a file — or pipe it)
+./bin/spanner sim -import mychar.txt
+pbpaste | ./bin/spanner sim -import -
+
+# or from a .simc profile file
+./bin/spanner sim -profile mychar.simc
 ```
 
-`--simc` is optional if `simc` is on your `PATH` or `SPANNER_SIMC` is set. The
-report lands in `./reports/` and opens in your browser.
+`-simc /path/to/simc` is optional if `simc` is on your `PATH` or
+`SPANNER_SIMC` is set. The report lands in `./reports/` and opens in your
+browser.
 
 ## Development
 
