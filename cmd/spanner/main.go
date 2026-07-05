@@ -21,14 +21,57 @@ import (
 
 const simTimeout = 30 * time.Minute
 
+const usage = `usage:
+  spanner sim (-profile <file.simc> | -import <export.txt|->) [-simc <path>]
+              [-iterations N] [-threads N] [-target-error PCT] [-out DIR] [-open=false]
+  spanner forge update    download the latest simc nightly into the cache
+  spanner forge which     print the simc binary a sim would use`
+
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "sim" {
-		fmt.Fprintln(os.Stderr, "usage: spanner sim (-profile <file.simc> | -import <export.txt|->) [-simc <path>] [-iterations N] [-threads N] [-target-error PCT] [-out DIR] [-open=false]")
+	var err error
+	switch {
+	case len(os.Args) >= 2 && os.Args[1] == "sim":
+		err = runSim(os.Args[2:])
+	case len(os.Args) >= 2 && os.Args[1] == "forge":
+		err = runForge(os.Args[2:])
+	default:
+		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(2)
 	}
-	if err := runSim(os.Args[2:]); err != nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "spanner:", err)
 		os.Exit(1)
+	}
+}
+
+func runForge(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: spanner forge (update|which)")
+	}
+	cacheDir, err := forge.DefaultCacheDir()
+	if err != nil {
+		return fmt.Errorf("resolving cache dir: %w", err)
+	}
+	switch args[0] {
+	case "update":
+		ctx, cancel := context.WithTimeout(context.Background(), simTimeout)
+		defer cancel()
+		fetcher := forge.Fetcher{CacheDir: cacheDir, Progress: os.Stderr}
+		path, err := fetcher.Update(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(path)
+		return nil
+	case "which":
+		path, err := forge.Locate("", cacheDir)
+		if err != nil {
+			return err
+		}
+		fmt.Println(path)
+		return nil
+	default:
+		return fmt.Errorf("unknown forge command %q; want update or which", args[0])
 	}
 }
 

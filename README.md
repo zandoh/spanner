@@ -26,11 +26,15 @@ One Go core, thin clients on top:
 
 ## Quick start
 
-Requires Go and a SimulationCraft CLI binary ([nightlies](http://downloads.simulationcraft.org/nightly/)
-for Windows/macOS; build from source on Linux).
+Requires Go. On macOS, spanner fetches SimulationCraft for you; elsewhere,
+grab a [nightly](http://downloads.simulationcraft.org/nightly/) (Windows) or
+build from source (Linux).
 
 ```sh
 make build
+
+# install/refresh the simc nightly (macOS; run again after game patches)
+./bin/spanner forge update
 
 # from a /simc addon export (type /simc in-game, copy, paste into a file — or pipe it)
 ./bin/spanner sim -import mychar.txt
@@ -40,9 +44,9 @@ pbpaste | ./bin/spanner sim -import -
 ./bin/spanner sim -profile mychar.simc
 ```
 
-`-simc /path/to/simc` is optional if `simc` is on your `PATH` or
-`SPANNER_SIMC` is set. The report lands in `./reports/` and opens in your
-browser.
+Binary resolution order: `-simc` flag → `SPANNER_SIMC` env → newest cached
+nightly (`spanner forge which` shows it) → `PATH`. The report lands in
+`./reports/` and opens in your browser.
 
 ## Development
 
