@@ -8,7 +8,7 @@ import (
 )
 
 func TestResolveInputProfilePassthrough(t *testing.T) {
-	in, err := resolveInput("profiles/MID1_Death_Knight_Blood.simc", "")
+	in, err := resolveInput("profiles/MID1_Death_Knight_Blood.simc", "", "")
 	if err != nil {
 		t.Fatalf("resolveInput: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestResolveInputImport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	in, err := resolveInput("", src)
+	in, err := resolveInput("", src, "")
 	if err != nil {
 		t.Fatalf("resolveInput: %v", err)
 	}
@@ -48,10 +48,16 @@ func TestResolveInputImport(t *testing.T) {
 }
 
 func TestResolveInputFlagValidation(t *testing.T) {
-	if _, err := resolveInput("", ""); err == nil {
-		t.Error("want error when neither flag is set")
+	if _, err := resolveInput("", "", ""); err == nil {
+		t.Error("want error when no input flag is set")
 	}
-	if _, err := resolveInput("a.simc", "b.txt"); err == nil {
-		t.Error("want error when both flags are set")
+	for _, combo := range [][3]string{
+		{"a.simc", "b.txt", ""},
+		{"a.simc", "", "zandy"},
+		{"", "b.txt", "zandy"},
+	} {
+		if _, err := resolveInput(combo[0], combo[1], combo[2]); err == nil {
+			t.Errorf("want mutual-exclusion error for %v", combo)
+		}
 	}
 }

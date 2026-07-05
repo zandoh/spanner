@@ -42,6 +42,11 @@ pbpaste | ./bin/spanner sim -import -
 
 # or from a .simc profile file
 ./bin/spanner sim -profile mychar.simc
+
+# save characters so you never paste twice
+pbpaste | ./bin/spanner char save zandy
+./bin/spanner sim -char zandy
+./bin/spanner char list
 ```
 
 Binary resolution order: `-simc` flag → `SPANNER_SIMC` env → newest cached
