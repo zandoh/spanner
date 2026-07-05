@@ -51,7 +51,8 @@ func runSim(args []string) error {
 	}
 	defer input.cleanup()
 
-	simcPath, err := forge.Locate(*simcFlag)
+	cacheDir, _ := forge.DefaultCacheDir() // empty on error: Locate just skips the cache
+	simcPath, err := forge.Locate(*simcFlag, cacheDir)
 	if err != nil {
 		return err
 	}

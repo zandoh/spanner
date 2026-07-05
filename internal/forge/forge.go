@@ -1,5 +1,5 @@
-// Package forge manages the SimulationCraft binary. Phase 0 only locates an
-// existing binary; fetching and verifying nightlies comes later.
+// Package forge manages the SimulationCraft binary: locating one to run and
+// fetching nightly builds into a managed cache.
 package forge
 
 import (
@@ -14,18 +14,25 @@ const EnvVar = "SPANNER_SIMC"
 
 // Locate resolves a runnable simc binary, in order of preference: the
 // explicit path (e.g. a --simc flag), the SPANNER_SIMC environment variable,
-// then PATH.
-func Locate(explicit string) (string, error) {
+// the newest build in the managed cache (which spanner keeps current, unlike
+// a hand-installed PATH copy), then PATH. cacheDir may be empty to skip the
+// cache.
+func Locate(explicit, cacheDir string) (string, error) {
 	if explicit != "" {
 		return checkBinary(explicit)
 	}
 	if env := os.Getenv(EnvVar); env != "" {
 		return checkBinary(env)
 	}
+	if cacheDir != "" {
+		if path, ok := newestInstalled(cacheDir); ok {
+			return path, nil
+		}
+	}
 	if path, err := exec.LookPath("simc"); err == nil {
 		return path, nil
 	}
-	return "", errors.New("forge: no simc binary found: pass --simc, set " + EnvVar + ", or put simc on PATH")
+	return "", errors.New("forge: no simc binary found: run `spanner forge update` to install the latest nightly, pass -simc, set " + EnvVar + ", or put simc on PATH")
 }
 
 func checkBinary(path string) (string, error) {
