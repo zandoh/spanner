@@ -20,7 +20,10 @@ import (
 //go:embed report.tmpl.html
 var reportSrc string
 
-var reportTmpl = template.Must(template.New("report").Parse(reportSrc))
+var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
+	"add": func(a, b float64) float64 { return a + b },
+	"sub": func(a, b float64) float64 { return a - b },
+}).Parse(reportSrc))
 
 // Meta carries report provenance that isn't part of the sim data itself.
 type Meta struct {
@@ -52,6 +55,8 @@ type playerView struct {
 	DPSMax    string
 	DTPS      string
 	HPS       string
+	DPSChart  *chartView
+	Resources []*chartView
 	Abilities []abilityView
 	Buffs     []buffView
 	Gear      []gearView
@@ -105,6 +110,8 @@ func Render(w io.Writer, rep *gauge.Report, meta Meta) error {
 			DPSMax:    fmtInt(cd.DPS.Max),
 			DTPS:      fmtCompact(cd.DTPS.Mean),
 			HPS:       fmtInt(cd.HPS.Mean),
+			DPSChart:  buildTimeline("Damage per second over the fight", "DPS", "teal", cd.TimelineDmg, 210),
+			Resources: resourceCharts(cd.ResourceTimelines),
 			Abilities: abilityViews(p.Stats),
 			Buffs:     buffViews(p.Buffs),
 			Gear:      gearViews(p.Gear),
@@ -115,6 +122,29 @@ func Render(w io.Writer, rep *gauge.Report, meta Meta) error {
 		return fmt.Errorf("blueprint: rendering report: %w", err)
 	}
 	return nil
+}
+
+// resourceCharts renders one small-multiple per combat resource, each with
+// its own scale — runes (0–6) and runic power (0–100) on a shared axis would
+// misstate both. Health timelines are the tank lens's material, not the DPS
+// report's.
+func resourceCharts(timelines map[string]gauge.Timeline) []*chartView {
+	names := make([]string, 0, len(timelines))
+	for name := range timelines {
+		if name == "health" || name == "health_pct" {
+			continue
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var charts []*chartView
+	for _, name := range names {
+		label := prettify(name)
+		if c := buildTimeline(label, label, "brass", timelines[name], 130); c != nil {
+			charts = append(charts, c)
+		}
+	}
+	return charts
 }
 
 func abilityViews(stats []gauge.ActionStat) []abilityView {

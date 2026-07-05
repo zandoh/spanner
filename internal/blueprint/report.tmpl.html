@@ -102,6 +102,25 @@
     font-variant-numeric: tabular-nums;
   }
 
+  svg.timeline { display: block; width: 100%; height: auto; }
+  svg.timeline .grid { stroke: var(--hairline); stroke-width: 1; }
+  svg.timeline .axis-label { fill: var(--muted); font-size: 11px; }
+  svg.timeline .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.timeline .line.teal { stroke: var(--teal); }
+  svg.timeline .line.brass { stroke: var(--brass); }
+  svg.timeline .area { stroke: none; opacity: 0.1; }
+  svg.timeline .area.teal { fill: var(--teal); }
+  svg.timeline .area.brass { fill: var(--brass); }
+  svg.timeline .crosshair { stroke: var(--baseline); stroke-width: 1; visibility: hidden; }
+  svg.timeline .cursor-dot { r: 4; stroke: var(--surface); stroke-width: 2; visibility: hidden; }
+  svg.timeline .cursor-dot.teal { fill: var(--teal); }
+  svg.timeline .cursor-dot.brass { fill: var(--brass); }
+  .chart-stack { display: grid; gap: 20px; }
+  .chart-stack h3 {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px;
+  }
+
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th {
     text-align: left; font-size: 12px; font-weight: 600; color: var(--muted);
@@ -159,6 +178,12 @@
     </div>
   </section>
 
+  {{if .Player.DPSChart}}
+  <section class="card">
+    {{template "timeline" .Player.DPSChart}}
+  </section>
+  {{end}}
+
   {{if .Player.Abilities}}
   <section class="card">
     <h2>Damage by ability</h2>
@@ -189,6 +214,15 @@
         </div>
       </div>
       {{end}}
+    </div>
+  </section>
+  {{end}}
+
+  {{if .Player.Resources}}
+  <section class="card">
+    <h2>Resources over the fight</h2>
+    <div class="chart-stack">
+      {{range .Player.Resources}}{{template "timeline" .}}{{end}}
     </div>
   </section>
   {{end}}
@@ -226,6 +260,40 @@
 <script>
   (function () {
     var tip = document.getElementById("tooltip");
+    document.querySelectorAll("svg.timeline").forEach(function (svg) {
+      var series = JSON.parse(svg.getAttribute("data-series"));
+      var px = +svg.getAttribute("data-px"), pw = +svg.getAttribute("data-pw");
+      var unit = svg.getAttribute("data-unit");
+      var cross = svg.querySelector(".crosshair"), dot = svg.querySelector(".cursor-dot");
+      svg.addEventListener("mousemove", function (e) {
+        var pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        var x = pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+        var i = Math.round((x - px) / pw * (series.length - 1));
+        if (i < 0 || i >= series.length) { hide(); return; }
+        var cx = px + i / (series.length - 1) * pw;
+        cross.setAttribute("x1", cx); cross.setAttribute("x2", cx);
+        cross.style.visibility = "visible";
+        dot.setAttribute("cx", cx); dot.setAttribute("cy", series[i][1]);
+        dot.style.visibility = "visible";
+        var m = Math.floor(i / 60), s = String(i % 60).padStart(2, "0");
+        tip.textContent = m + ":" + s + " — " + series[i][0].toLocaleString() + " " + unit;
+        tip.style.display = "block";
+        tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + "px";
+        tip.style.top = (e.clientY + 14) + "px";
+      });
+      svg.addEventListener("mouseleave", hide);
+      function hide() {
+        cross.style.visibility = "hidden";
+        dot.style.visibility = "hidden";
+        tip.style.display = "none";
+      }
+    });
+  })();
+</script>
+<script>
+  (function () {
+    var tip = document.getElementById("tooltip");
     document.querySelectorAll(".row[data-tip]").forEach(function (row) {
       row.addEventListener("mousemove", function (e) {
         tip.textContent = row.getAttribute("data-tip");
@@ -241,3 +309,24 @@
 </script>
 </body>
 </html>
+
+{{define "timeline"}}
+<div class="chart-block">
+  <h3>{{.Title}}</h3>
+  <svg class="timeline" viewBox="0 0 {{.W}} {{.H}}" data-series="{{.SeriesJSON}}"
+       data-unit="{{.Unit}}" data-px="{{.PlotX}}" data-pw="{{.PlotW}}" role="img" aria-label="{{.Title}}">
+    {{$c := .}}
+    {{range .YTicks}}
+    <line class="grid" x1="{{$c.PlotX}}" x2="{{printf "%.1f" (add $c.PlotX $c.PlotW)}}" y1="{{printf "%.1f" .Pos}}" y2="{{printf "%.1f" .Pos}}"/>
+    <text class="axis-label" x="{{printf "%.1f" (sub $c.PlotX 8)}}" y="{{printf "%.1f" (add .Pos 4)}}" text-anchor="end">{{.Label}}</text>
+    {{end}}
+    {{range .XTicks}}
+    <text class="axis-label" x="{{printf "%.1f" .Pos}}" y="{{$c.H}}" text-anchor="middle">{{.Label}}</text>
+    {{end}}
+    <path class="area {{.Class}}" d="{{.Area}}"/>
+    <path class="line {{.Class}}" d="{{.Line}}"/>
+    <line class="crosshair" y1="{{.PlotY}}" y2="{{printf "%.1f" (add .PlotY .PlotH)}}" x1="0" x2="0"/>
+    <circle class="cursor-dot {{.Class}}" cx="0" cy="0"/>
+  </svg>
+</div>
+{{end}}
