@@ -79,7 +79,9 @@ func TestRunReportsFailure(t *testing.T) {
 }
 
 func TestRunKillsOnContextCancel(t *testing.T) {
-	sim := fakeSimc(t, `sleep 30`)
+	// The background child survives the shell's SIGKILL and holds the output
+	// pipe open — the shape of a stuck sim that leaves an orphan behind.
+	sim := fakeSimc(t, `sleep 30 & wait`)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
@@ -88,7 +90,9 @@ func TestRunKillsOnContextCancel(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error after context timeout")
 	}
-	if elapsed := time.Since(start); elapsed > 5*time.Second {
+	// Bound: ctx timeout + waitDelay for the orphan-held pipe, with margin —
+	// far below the orphan's 30s lifetime.
+	if elapsed := time.Since(start); elapsed > 10*time.Second {
 		t.Errorf("process not killed promptly: took %v", elapsed)
 	}
 }

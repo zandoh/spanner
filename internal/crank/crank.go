@@ -7,7 +7,14 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"time"
 )
+
+// waitDelay bounds how long Run waits for simc's output pipes to close after
+// the process is killed. Without it, anything the dead process leaves holding
+// the pipe (an orphaned child, a stuck thread) blocks Run for the orphan's
+// lifetime instead of the kill being prompt.
+const waitDelay = 2 * time.Second
 
 // Options tune a sim run. Zero values defer to SimC's own defaults.
 type Options struct {
@@ -34,6 +41,7 @@ func Run(ctx context.Context, simcPath, profilePath, jsonPath string, opts Optio
 	cmd := exec.CommandContext(ctx, simcPath, args...) // #nosec G204 -- running the user's own simc binary on their profile is the product
 	cmd.Stdout = progress
 	cmd.Stderr = progress
+	cmd.WaitDelay = waitDelay
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("crank: simc run failed: %w", err)
 	}
