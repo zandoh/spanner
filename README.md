@@ -47,6 +47,11 @@ pbpaste | ./bin/spanner sim -import -
 pbpaste | ./bin/spanner char save zandy
 ./bin/spanner sim -char zandy
 ./bin/spanner char list
+
+# rank gear/talent variations against your current setup
+./bin/spanner compare -char zandy \
+  -vs "Crafted boots=feet=,id=219911" \
+  -vs "New talents=talents=CoPAAAA..."
 ```
 
 Binary resolution order: `-simc` flag → `SPANNER_SIMC` env → newest cached

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -27,6 +28,8 @@ const usage = `usage:
   spanner sim (-profile <file.simc> | -import <export.txt|-> | -char <name>)
               [-simc <path>] [-iterations N] [-threads N] [-target-error PCT]
               [-out DIR] [-open=false]
+  spanner compare (-profile|-import|-char as above) -vs "Label=override[;override...]"
+              [-vs ...] [sim flags]                   rank variations against the baseline
   spanner char save <name> [-import <export.txt|->]   save a character (default: stdin)
   spanner char list                                   list saved characters
   spanner char rm <name>                              delete a saved character
@@ -38,6 +41,8 @@ func main() {
 	switch {
 	case len(os.Args) >= 2 && os.Args[1] == "sim":
 		err = runSim(os.Args[2:])
+	case len(os.Args) >= 2 && os.Args[1] == "compare":
+		err = runCompare(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "char":
 		err = runChar(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "forge":
@@ -168,53 +173,151 @@ func runSim(args []string) error {
 	}
 	defer input.cleanup()
 
+	opts := crank.Options{Iterations: *iterations, Threads: *threads, TargetError: *targetError}
+	_, err = executeSim(input, *simcFlag, opts, *outDir, *openReport)
+	return err
+}
+
+// executeSim runs the shared pipeline: locate simc, run it, parse the json2
+// output, render the report, and optionally open it.
+func executeSim(input *simInput, simcFlag string, opts crank.Options, outDir string, openReport bool) (*gauge.Report, error) {
 	cacheDir, _ := forge.DefaultCacheDir() // empty on error: Locate just skips the cache
-	simcPath, err := forge.Locate(*simcFlag, cacheDir)
+	simcPath, err := forge.Locate(simcFlag, cacheDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := os.MkdirAll(*outDir, 0o750); err != nil {
-		return err
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
+		return nil, err
 	}
 	stem := fmt.Sprintf("%s-%s", input.stem, time.Now().Format("20060102-150405"))
-	jsonPath := filepath.Join(*outDir, stem+".simc.json")
-	htmlPath := filepath.Join(*outDir, stem+".html")
+	jsonPath := filepath.Join(outDir, stem+".simc.json")
+	htmlPath := filepath.Join(outDir, stem+".html")
 
 	ctx, cancel := context.WithTimeout(context.Background(), simTimeout)
 	defer cancel()
 
 	fmt.Fprintf(os.Stderr, "⚙ spanner: cranking %s with %s\n", input.display, simcPath)
-	opts := crank.Options{Iterations: *iterations, Threads: *threads, TargetError: *targetError}
 	if err := crank.Run(ctx, simcPath, input.path, jsonPath, opts, os.Stderr); err != nil {
-		return err
+		return nil, err
 	}
 
 	rep, err := gauge.ParseFile(jsonPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := os.Create(htmlPath) // #nosec G304 -- report path derives from the user's -out flag
 	if err != nil {
-		return err
+		return nil, err
 	}
 	meta := blueprint.Meta{GeneratedAt: time.Now(), ProfileName: input.display}
 	if err := blueprint.Render(out, rep, meta); err != nil {
 		_ = out.Close() // render error is the one worth reporting
-		return err
+		return nil, err
 	}
 	if err := out.Close(); err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Printf("report: %s\nraw json: %s\n", htmlPath, jsonPath)
-	if *openReport {
+	if openReport {
 		if err := openInBrowser(htmlPath); err != nil {
 			fmt.Fprintln(os.Stderr, "spanner: could not open browser:", err)
 		}
 	}
+	return rep, nil
+}
+
+// multiFlag collects a repeatable string flag.
+type multiFlag []string
+
+func (m *multiFlag) String() string     { return strings.Join(*m, ", ") }
+func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
+
+func runCompare(args []string) error {
+	fs := flag.NewFlagSet("compare", flag.ExitOnError)
+	simcFlag := fs.String("simc", "", "path to the simc binary")
+	profileFlag := fs.String("profile", "", "path to a .simc profile")
+	importFlag := fs.String("import", "", "path to a /simc addon export, or - for stdin")
+	charFlag := fs.String("char", "", "name of a saved character")
+	iterations := fs.Int("iterations", 0, "sim iterations per candidate")
+	threads := fs.Int("threads", 0, "sim threads")
+	targetError := fs.Float64("target-error", 0, "stop at this error percentage")
+	outDir := fs.String("out", "reports", "directory for the report and raw json")
+	openReport := fs.Bool("open", true, "open the report in a browser when done")
+	var vs multiFlag
+	fs.Var(&vs, "vs", "candidate as Label=override[;override...] (repeatable)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if len(vs) == 0 {
+		return fmt.Errorf("compare needs at least one -vs candidate")
+	}
+	vars := make([]profile.Variation, 0, len(vs))
+	for _, s := range vs {
+		v, err := profile.ParseVariation(s)
+		if err != nil {
+			return err
+		}
+		vars = append(vars, v)
+	}
+
+	prof, err := loadProfile(*profileFlag, *importFlag, *charFlag)
+	if err != nil {
+		return err
+	}
+	input, err := rawInput(prof.WithProfilesets(vars), prof.Slug()+"-compare",
+		fmt.Sprintf("%s vs %d candidate(s)", prof.Name, len(vars)))
+	if err != nil {
+		return err
+	}
+	defer input.cleanup()
+
+	opts := crank.Options{Iterations: *iterations, Threads: *threads, TargetError: *targetError}
+	rep, err := executeSim(input, *simcFlag, opts, *outDir, *openReport)
+	if err != nil {
+		return err
+	}
+	printRanking(rep)
 	return nil
+}
+
+// printRanking mirrors the report's comparison on stdout, best first.
+func printRanking(rep *gauge.Report) {
+	results := rep.Sim.Profilesets.Results
+	if len(results) == 0 {
+		fmt.Println("simc returned no profileset results")
+		return
+	}
+	base := rep.Sim.Players[0].CollectedData.DPS.Mean
+	sort.Slice(results, func(i, j int) bool { return results[i].Mean > results[j].Mean })
+
+	w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
+	_, _ = fmt.Fprintln(w, "CANDIDATE\tDPS\tVS BASELINE")
+	_, _ = fmt.Fprintf(w, "baseline\t%.0f\t—\n", base)
+	for _, r := range results {
+		_, _ = fmt.Fprintf(w, "%s\t%.0f\t%+.0f (%+.2f%%)\n", r.Name, r.Mean, r.Mean-base, (r.Mean-base)/base*100)
+	}
+	_ = w.Flush()
+}
+
+// loadProfile parses a character from whichever input flag is set.
+func loadProfile(profilePath, importPath, charName string) (*profile.Profile, error) {
+	switch {
+	case profilePath != "":
+		return readExport(profilePath)
+	case importPath != "":
+		return readExport(importPath)
+	case charName != "":
+		store, err := defaultStore()
+		if err != nil {
+			return nil, err
+		}
+		return store.Load(charName)
+	default:
+		return nil, fmt.Errorf("one of -profile, -import, or -char is required")
+	}
 }
 
 // simInput is a resolved sim source: a path SimC can execute, plus naming
@@ -278,11 +381,20 @@ func readExport(path string) (*profile.Profile, error) {
 
 // profileInput materializes a parsed profile as a temp file SimC can run.
 func profileInput(prof *profile.Profile) (*simInput, error) {
+	display := prof.Name
+	if prof.Spec != "" {
+		display = fmt.Sprintf("%s (%s %s)", prof.Name, prof.Spec, prof.Class)
+	}
+	return rawInput(prof.Raw, prof.Slug(), display)
+}
+
+// rawInput writes sim input text to a temp file SimC can run.
+func rawInput(text, stem, display string) (*simInput, error) {
 	tmp, err := os.CreateTemp("", "spanner-*.simc")
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tmp.WriteString(prof.Raw); err != nil {
+	if _, err := tmp.WriteString(text); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
 		return nil, err
@@ -291,14 +403,9 @@ func profileInput(prof *profile.Profile) (*simInput, error) {
 		_ = os.Remove(tmp.Name())
 		return nil, err
 	}
-
-	display := prof.Name
-	if prof.Spec != "" {
-		display = fmt.Sprintf("%s (%s %s)", prof.Name, prof.Spec, prof.Class)
-	}
 	return &simInput{
 		path:    tmp.Name(),
-		stem:    prof.Slug(),
+		stem:    stem,
 		display: display,
 		cleanup: func() { _ = os.Remove(tmp.Name()) },
 	}, nil
