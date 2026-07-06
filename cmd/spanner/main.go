@@ -5,6 +5,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +21,7 @@ import (
 	"github.com/zandoh/spanner/internal/gauge"
 	"github.com/zandoh/spanner/internal/profile"
 	"github.com/zandoh/spanner/internal/rig"
+	"github.com/zandoh/spanner/internal/web"
 	"github.com/zandoh/spanner/internal/workshop"
 )
 
@@ -34,6 +37,7 @@ const usage = `usage:
   spanner char save <name> [-import <export.txt|->]   save a character (default: stdin)
   spanner char list                                   list saved characters
   spanner char rm <name>                              delete a saved character
+  spanner serve [-addr 127.0.0.1:8177] [-out DIR]     local web UI with live progress
   spanner forge update    download the latest simc nightly into the cache
   spanner forge which     print the simc binary a sim would use`
 
@@ -48,6 +52,8 @@ func main() {
 		err = runCompare(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "char":
 		err = runChar(os.Args[2:])
+	case len(os.Args) >= 2 && os.Args[1] == "serve":
+		err = runServe(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "forge":
 		err = runForge(os.Args[2:])
 	default:
@@ -123,6 +129,65 @@ func runChar(args []string) error {
 	default:
 		return fmt.Errorf("unknown char command %q; want save, list, or rm", args[0])
 	}
+}
+
+// rigRunner adapts the rig pipeline to the web server's Runner interface.
+type rigRunner struct {
+	simcPath string
+	outDir   string
+}
+
+func (r rigRunner) Run(progress io.Writer, inputPath, stem, display string, iterations int, targetError float64, weights bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), simTimeout)
+	defer cancel()
+	res, err := rig.Run(ctx, rig.Job{
+		SimcPath:  r.simcPath,
+		InputPath: inputPath,
+		Stem:      stem,
+		Display:   display,
+		Options:   crank.Options{Iterations: iterations, TargetError: targetError, ScaleFactors: weights},
+		OutDir:    r.outDir,
+		Progress:  progress,
+	})
+	if err != nil {
+		return "", err
+	}
+	return filepath.Base(res.HTMLPath), nil
+}
+
+func runServe(args []string) error {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	addr := fs.String("addr", "127.0.0.1:8177", "listen address (loopback: this is a personal workbench)")
+	outDir := fs.String("out", "reports", "directory for reports and raw json")
+	simcFlag := fs.String("simc", "", "path to the simc binary")
+	openUI := fs.Bool("open", true, "open the UI in a browser")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	store, err := defaultStore()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(*outDir, 0o750); err != nil {
+		return err
+	}
+
+	srv := web.New(store, *outDir, rigRunner{simcPath: *simcFlag, outDir: *outDir})
+	httpSrv := &http.Server{
+		Addr:              *addr,
+		Handler:           srv.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	url := "http://" + *addr
+	fmt.Printf("⚙ spanner workbench: %s (ctrl-c to stop)\n", url)
+	if *openUI {
+		go func() {
+			if err := openInBrowser(url); err != nil {
+				fmt.Fprintln(os.Stderr, "spanner: could not open browser:", err)
+			}
+		}()
+	}
+	return httpSrv.ListenAndServe()
 }
 
 func runForge(args []string) error {
@@ -417,10 +482,14 @@ func rawInput(text, stem, display string) (*simInput, error) {
 	}, nil
 }
 
-func openInBrowser(path string) error {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return err
+// openInBrowser opens a local file path or an http(s) URL.
+func openInBrowser(target string) error {
+	abs := target
+	if !strings.HasPrefix(target, "http") {
+		var err error
+		if abs, err = filepath.Abs(target); err != nil {
+			return err
+		}
 	}
 	// #nosec G204 -- opening spanner's own report file with the platform opener
 	var cmd *exec.Cmd
