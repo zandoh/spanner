@@ -14,11 +14,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/zandoh/spanner/internal/blueprint"
 	"github.com/zandoh/spanner/internal/crank"
 	"github.com/zandoh/spanner/internal/forge"
 	"github.com/zandoh/spanner/internal/gauge"
 	"github.com/zandoh/spanner/internal/profile"
+	"github.com/zandoh/spanner/internal/rig"
 	"github.com/zandoh/spanner/internal/workshop"
 )
 
@@ -207,55 +207,32 @@ func printWeights(rep *gauge.Report) {
 	_ = w.Flush()
 }
 
-// executeSim runs the shared pipeline: locate simc, run it, parse the json2
-// output, render the report, and optionally open it.
+// executeSim drives the rig pipeline with terminal-appropriate plumbing:
+// progress to stderr, paths to stdout, optional browser open.
 func executeSim(input *simInput, simcFlag string, opts crank.Options, outDir string, openReport bool) (*gauge.Report, error) {
-	cacheDir, _ := forge.DefaultCacheDir() // empty on error: Locate just skips the cache
-	simcPath, err := forge.Locate(simcFlag, cacheDir)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := os.MkdirAll(outDir, 0o750); err != nil {
-		return nil, err
-	}
-	stem := fmt.Sprintf("%s-%s", input.stem, time.Now().Format("20060102-150405"))
-	jsonPath := filepath.Join(outDir, stem+".simc.json")
-	htmlPath := filepath.Join(outDir, stem+".html")
-
 	ctx, cancel := context.WithTimeout(context.Background(), simTimeout)
 	defer cancel()
 
-	fmt.Fprintf(os.Stderr, "⚙ spanner: cranking %s with %s\n", input.display, simcPath)
-	if err := crank.Run(ctx, simcPath, input.path, jsonPath, opts, os.Stderr); err != nil {
-		return nil, err
-	}
-
-	rep, err := gauge.ParseFile(jsonPath)
+	res, err := rig.Run(ctx, rig.Job{
+		SimcPath:  simcFlag,
+		InputPath: input.path,
+		Stem:      input.stem,
+		Display:   input.display,
+		Options:   opts,
+		OutDir:    outDir,
+		Progress:  os.Stderr,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := os.Create(htmlPath) // #nosec G304 -- report path derives from the user's -out flag
-	if err != nil {
-		return nil, err
-	}
-	meta := blueprint.Meta{GeneratedAt: time.Now(), ProfileName: input.display}
-	if err := blueprint.Render(out, rep, meta); err != nil {
-		_ = out.Close() // render error is the one worth reporting
-		return nil, err
-	}
-	if err := out.Close(); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("report: %s\nraw json: %s\n", htmlPath, jsonPath)
+	fmt.Printf("report: %s\nraw json: %s\n", res.HTMLPath, res.JSONPath)
 	if openReport {
-		if err := openInBrowser(htmlPath); err != nil {
+		if err := openInBrowser(res.HTMLPath); err != nil {
 			fmt.Fprintln(os.Stderr, "spanner: could not open browser:", err)
 		}
 	}
-	return rep, nil
+	return res.Report, nil
 }
 
 // multiFlag collects a repeatable string flag.
