@@ -115,6 +115,25 @@ func TestParseProfilesetFixture(t *testing.T) {
 	}
 }
 
+func TestParseScaleFactorFixture(t *testing.T) {
+	rep, err := ParseFile("testdata/weights-1205.json")
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	sf := rep.Sim.Players[0].ScaleFactors
+	if len(sf) == 0 {
+		t.Fatal("no scale factors parsed")
+	}
+	for _, stat := range []string{"Str", "Crit", "Haste", "Mastery", "Vers", "Wdps"} {
+		if _, ok := sf[stat]; !ok {
+			t.Errorf("scale factor %q missing", stat)
+		}
+	}
+	if sf["Str"] <= 0 {
+		t.Errorf("Str weight = %v, want positive", sf["Str"])
+	}
+}
+
 func TestParseRejectsNonReports(t *testing.T) {
 	for name, doc := range map[string]string{
 		"empty object": `{}`,

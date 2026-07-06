@@ -78,6 +78,9 @@ type Player struct {
 	Stats          []ActionStat    `json:"stats"`
 	Gear           map[string]Item `json:"gear"`
 	Buffs          []Buff          `json:"buffs"`
+	// ScaleFactors maps stat name → DPS gained per point, present only when
+	// the sim ran with calculate_scale_factors=1.
+	ScaleFactors map[string]float64 `json:"scale_factors"`
 }
 
 // CollectedData carries the per-iteration aggregates for an actor. DTPS,
