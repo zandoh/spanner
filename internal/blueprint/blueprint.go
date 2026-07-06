@@ -43,6 +43,7 @@ type page struct {
 	ErrorPct    string
 	Elapsed     string
 	Comparison  *comparisonView
+	Weights     *weightsView
 	Player      playerView
 }
 
@@ -102,6 +103,7 @@ func Render(w io.Writer, rep *gauge.Report, meta Meta) error {
 		ErrorPct:    fmtErrorPct(cd.DPS),
 		Elapsed:     fmt.Sprintf("%.1fs", rep.Sim.Statistics.ElapsedTimeSeconds),
 		Comparison:  buildComparison(rep),
+		Weights:     buildWeights(p.ScaleFactors),
 		Player: playerView{
 			Name:      p.Name,
 			Spec:      p.Specialization,

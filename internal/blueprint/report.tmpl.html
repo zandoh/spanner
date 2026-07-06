@@ -114,6 +114,8 @@
     font-size: 12px; color: var(--ink-2); white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+  .bar.loss { background: var(--loss); }
+  .footnote { margin-top: 12px; font-size: 12px; color: var(--muted); }
 
   svg.timeline { display: block; width: 100%; height: auto; }
   svg.timeline .grid { stroke: var(--hairline); stroke-width: 1; }
@@ -208,6 +210,24 @@
       </div>
       {{end}}
     </div>
+  </section>
+  {{end}}
+
+  {{if .Weights}}
+  <section class="card">
+    <h2>Stat weights — DPS per point</h2>
+    <div class="chart">
+      {{range .Weights.Rows}}
+      <div class="row">
+        <span class="name">{{.Stat}}</span>
+        <div class="track">
+          <div class="bar{{if .Negative}} loss{{end}}" style="width: {{printf "%.2f" .WidthPct}}%"></div>
+          <span class="tip" style="left: {{printf "%.2f" .WidthPct}}%">{{.Value}}</span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{if .Weights.Wdps}}<p class="footnote">Weapon DPS: {{.Weights.Wdps}} per point (kept off the scale above).</p>{{end}}
   </section>
   {{end}}
 
