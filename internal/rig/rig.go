@@ -55,7 +55,7 @@ func Run(ctx context.Context, job Job) (*Result, error) {
 	jsonPath := filepath.Join(job.OutDir, stem+".simc.json")
 	htmlPath := filepath.Join(job.OutDir, stem+".html")
 
-	fmt.Fprintf(progress, "⚙ spanner: cranking %s with %s\n", job.Display, simcPath)
+	_, _ = fmt.Fprintf(progress, "⚙ spanner: cranking %s with %s\n", job.Display, simcPath)
 	if err := crank.Run(ctx, simcPath, job.InputPath, jsonPath, job.Options, progress); err != nil {
 		return nil, err
 	}

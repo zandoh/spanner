@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spanner</title>
+<style>
+  :root {
+    --page: #f1ece0; --surface: #faf7f0; --ink: #1c1917; --ink-2: #57534e;
+    --muted: #8a857c; --hairline: #e5dfd2; --teal: #0c8975; --brass: #a16207;
+    --loss: #c23a2f; --ring: rgba(28, 25, 23, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #121110; --surface: #1b1917; --ink: #f5f2ea; --ink-2: #b8b2a6;
+      --muted: #8a857c; --hairline: #2c2a26; --teal: #12a191; --brass: #c08a12;
+      --loss: #e05a4e; --ring: rgba(245, 242, 234, 0.10);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 32px 16px 48px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px; }
+  .wordmark { font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+  .wordmark .gear { color: var(--brass); }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 20px 24px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 4px; }
+  textarea, select, input {
+    width: 100%; font: 13px/1.4 ui-monospace, monospace; color: var(--ink);
+    background: var(--page); border: 1px solid var(--hairline); border-radius: 6px; padding: 8px;
+  }
+  textarea { height: 110px; resize: vertical; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end; }
+  .controls label { margin-top: 0; }
+  button {
+    margin-top: 16px; width: 100%; padding: 10px; font-weight: 600; font-size: 14px;
+    color: #fff; background: var(--teal); border: none; border-radius: 8px; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #log {
+    display: none; margin-top: 16px; padding: 10px; height: 160px; overflow-y: auto;
+    font: 12px/1.5 ui-monospace, monospace; color: var(--ink-2);
+    background: var(--page); border-radius: 6px; white-space: pre-wrap;
+  }
+  #result { display: none; margin-top: 12px; font-size: 14px; }
+  #result a { color: var(--teal); font-weight: 600; }
+  #result.error { color: var(--loss); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="wordmark"><span class="gear">⚙</span> spanner</span>
+    <span class="hint">local workbench</span>
+  </header>
+
+  <section class="card">
+    <label for="char">Saved character</label>
+    <select id="char"><option value="">— paste an export instead —</option></select>
+
+    <label for="import">/simc export</label>
+    <textarea id="import" placeholder='Type /simc in-game, copy, paste here.'></textarea>
+
+    <div class="controls">
+      <div>
+        <label for="preset">Precision</label>
+        <select id="preset">
+          <option value="1000">Quick (1k iterations)</option>
+          <option value="5000" selected>Standard (5k)</option>
+          <option value="25000">High (25k)</option>
+        </select>
+      </div>
+      <div>
+        <label for="weights">Stat weights</label>
+        <select id="weights">
+          <option value="">Off</option>
+          <option value="1">On (slower)</option>
+        </select>
+      </div>
+      <div><button id="go">Crank it</button></div>
+    </div>
+    <pre id="log"></pre>
+    <div id="result"></div>
+  </section>
+</div>
+<script>
+  var charSel = document.getElementById("char"), importBox = document.getElementById("import");
+  var log = document.getElementById("log"), result = document.getElementById("result");
+  var go = document.getElementById("go");
+
+  fetch("/api/characters").then(function (r) { return r.json(); }).then(function (chars) {
+    (chars || []).forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.name;
+      o.textContent = c.name + " — " + c.spec + " " + c.class;
+      charSel.appendChild(o);
+    });
+  });
+
+  go.addEventListener("click", function () {
+    var body = {
+      iterations: parseInt(document.getElementById("preset").value, 10),
+      weights: !!document.getElementById("weights").value
+    };
+    if (charSel.value) { body.char = charSel.value; } else { body["import"] = importBox.value; }
+
+    go.disabled = true;
+    log.style.display = "block"; log.textContent = "";
+    result.style.display = "none"; result.classList.remove("error");
+
+    fetch("/api/sim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { if (!r.ok) { return r.text().then(function (t) { throw new Error(t); }); } return r.json(); })
+      .then(function (d) {
+        var es = new EventSource("/api/runs/" + d.id + "/events");
+        es.addEventListener("progress", function (e) {
+          log.textContent += JSON.parse(e.data) + "\n";
+          log.scrollTop = log.scrollHeight;
+        });
+        es.addEventListener("done", function (e) {
+          es.close(); go.disabled = false;
+          var url = JSON.parse(e.data);
+          result.style.display = "block";
+          result.innerHTML = 'Done — <a href="' + url + '" target="_blank">open the report</a>';
+        });
+        es.addEventListener("error", function (e) {
+          es.close(); go.disabled = false;
+          result.style.display = "block"; result.classList.add("error");
+          result.textContent = e.data ? JSON.parse(e.data) : "run failed";
+        });
+      })
+      .catch(function (err) {
+        go.disabled = false;
+        result.style.display = "block"; result.classList.add("error");
+        result.textContent = err.message;
+      });
+  });
+</script>
+</body>
+</html>
