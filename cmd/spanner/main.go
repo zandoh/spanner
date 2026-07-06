@@ -37,6 +37,7 @@ const usage = `usage:
   spanner char save <name> [-import <export.txt|->]   save a character (default: stdin)
   spanner char list                                   list saved characters
   spanner char rm <name>                              delete a saved character
+  spanner runs [-out DIR] [-n 20]                     list past runs, newest first
   spanner serve [-addr 127.0.0.1:8177] [-out DIR]     local web UI with live progress
   spanner forge update    download the latest simc nightly into the cache
   spanner forge which     print the simc binary a sim would use`
@@ -52,6 +53,8 @@ func main() {
 		err = runCompare(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "char":
 		err = runChar(os.Args[2:])
+	case len(os.Args) >= 2 && os.Args[1] == "runs":
+		err = runRuns(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "serve":
 		err = runServe(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "forge":
@@ -129,6 +132,50 @@ func runChar(args []string) error {
 	default:
 		return fmt.Errorf("unknown char command %q; want save, list, or rm", args[0])
 	}
+}
+
+func runRuns(args []string) error {
+	fs := flag.NewFlagSet("runs", flag.ExitOnError)
+	outDir := fs.String("out", "reports", "directory holding the run index")
+	limit := fs.Int("n", 20, "show at most this many runs")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	entries, err := rig.History(*outDir)
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 {
+		fmt.Println("no runs recorded in", *outDir)
+		return nil
+	}
+	if len(entries) > *limit {
+		entries = entries[:*limit]
+	}
+	w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
+	_, _ = fmt.Fprintln(w, "WHEN\tWHO\tDPS\tKIND\tREPORT")
+	for _, e := range entries {
+		kind := "sim"
+		switch {
+		case e.Compare > 0:
+			kind = fmt.Sprintf("compare (%d)", e.Compare)
+		case e.Weights:
+			kind = "weights"
+		}
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s ± %s\t%s\t%s\n",
+			e.Time.Local().Format("2006-01-02 15:04"), e.Display,
+			fmtThousands(e.DPS), fmtThousands(e.DPSError), kind, filepath.Join(*outDir, e.HTML))
+	}
+	return w.Flush()
+}
+
+// fmtThousands renders 69282.4 as "69,282" for terminal tables.
+func fmtThousands(v float64) string {
+	s := fmt.Sprintf("%.0f", v)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }
 
 // rigRunner adapts the rig pipeline to the web server's Runner interface.
