@@ -78,5 +78,21 @@ func Run(ctx context.Context, job Job) (*Result, error) {
 		return nil, err
 	}
 
+	cd := rep.Sim.Players[0].CollectedData
+	entry := HistoryEntry{
+		Time:     time.Now().UTC(),
+		Display:  job.Display,
+		DPS:      cd.DPS.Mean,
+		DPSError: cd.DPS.MeanStdDev,
+		Weights:  job.Options.ScaleFactors,
+		Compare:  len(rep.Sim.Profilesets.Results),
+		HTML:     filepath.Base(htmlPath),
+		JSON:     filepath.Base(jsonPath),
+	}
+	if err := appendIndex(job.OutDir, entry); err != nil {
+		// History is a convenience; the run itself succeeded.
+		fmt.Fprintf(progress, "⚙ spanner: could not record run history: %v\n", err)
+	}
+
 	return &Result{Report: rep, HTMLPath: htmlPath, JSONPath: jsonPath}, nil
 }
