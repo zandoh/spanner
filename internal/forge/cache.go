@@ -4,11 +4,17 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 )
 
 // binaryName is the simc executable's filename inside an install dir.
-const binaryName = "simc"
+func binaryName() string {
+	if runtime.GOOS == "windows" {
+		return "simc.exe"
+	}
+	return "simc"
+}
 
 // DefaultCacheDir is where forge keeps managed simc installs
 // (e.g. ~/Library/Caches/spanner on macOS).
@@ -32,7 +38,7 @@ func installDir(cacheDir string, b build) string {
 
 // installedPath returns the binary path for a build if it is installed.
 func installedPath(cacheDir string, b build) (string, bool) {
-	p := filepath.Join(installDir(cacheDir, b), binaryName)
+	p := filepath.Join(installDir(cacheDir, b), binaryName())
 	if info, err := os.Stat(p); err == nil && !info.IsDir() {
 		return p, true
 	}
@@ -60,7 +66,7 @@ func newestInstalled(cacheDir string) (string, bool) {
 		if m == nil {
 			continue
 		}
-		p := filepath.Join(installRoot(cacheDir), e.Name(), binaryName)
+		p := filepath.Join(installRoot(cacheDir), e.Name(), binaryName())
 		if info, err := os.Stat(p); err != nil || info.IsDir() {
 			continue
 		}

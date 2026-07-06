@@ -22,6 +22,9 @@ linters:
           allow:
             - $gostd
             - github.com/zandoh/spanner
+            # Windows simc nightlies ship as .7z; there is no std-lib reader
+            # and no extraction tool guaranteed on a stock Windows install.
+            - github.com/bodgit/sevenzip
     staticcheck:
       checks: ["all"]
   exclusions:

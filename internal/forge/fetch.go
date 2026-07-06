@@ -98,7 +98,7 @@ func (f *Fetcher) Update(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("forge: writing manifest: %w", err)
 	}
 
-	path := filepath.Join(dir, binaryName)
+	path := filepath.Join(dir, binaryName())
 	f.logf("installed simc %s (sha256 %.12s…)", bld.tag(), sum)
 	return path, nil
 }
@@ -173,6 +173,8 @@ func extract(b build, artifact, destDir string) error {
 	switch b.OS {
 	case "macos":
 		return extractDMG(artifact, destDir)
+	case "win64", "winarm64":
+		return extract7z(artifact, destDir)
 	default:
 		return fmt.Errorf("no extractor for %s builds yet; use -simc or PATH", b.OS)
 	}
@@ -202,7 +204,7 @@ func extractDMG(dmgPath, destDir string) error {
 	if err := os.MkdirAll(destDir, 0o750); err != nil {
 		return err
 	}
-	if err := copyFile(filepath.Join(mnt, binaryName), filepath.Join(destDir, binaryName), 0o750); err != nil {
+	if err := copyFile(filepath.Join(mnt, "simc"), filepath.Join(destDir, binaryName()), 0o750); err != nil {
 		return fmt.Errorf("copying simc binary: %w", err)
 	}
 	// GPL-3.0 requires the license to accompany the binary; best effort.

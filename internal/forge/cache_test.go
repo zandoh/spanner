@@ -12,7 +12,7 @@ func fakeInstall(t *testing.T, cacheDir, tag string) string {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	p := filepath.Join(dir, binaryName)
+	p := filepath.Join(dir, binaryName())
 	if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o700); err != nil { // #nosec G306 -- stand-in binary
 		t.Fatal(err)
 	}
