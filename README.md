@@ -26,14 +26,14 @@ One Go core, thin clients on top:
 
 ## Install
 
-Grab a binary from [releases](https://github.com/zandoh/spanner/releases)
-(Windows/Linux/macOS, amd64 + arm64), unpack it, and put `spanner` on your
-PATH. On macOS and Windows, spanner fetches SimulationCraft for you
-(`spanner forge update`); on Linux, build simc
-[from source](https://github.com/simulationcraft/simc) and put it on PATH.
+```sh
+brew install zandoh/tap/spanner        # macOS / Linux
+```
 
-There is also a Homebrew tap (`brew install zandoh/tap/spanner`), currently
-private — it requires read access to the tap repo.
+or grab a binary from [releases](https://github.com/zandoh/spanner/releases)
+(Windows/Linux/macOS, amd64 + arm64). On macOS and Windows, spanner fetches
+SimulationCraft for you (`spanner forge update`); on Linux, build simc
+[from source](https://github.com/simulationcraft/simc) and put it on PATH.
 
 ## Quick start
 
