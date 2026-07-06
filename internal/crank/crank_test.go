@@ -29,12 +29,12 @@ func TestRunAssemblesArguments(t *testing.T) {
 	sim := fakeSimc(t, `echo "$@"`)
 	var progress bytes.Buffer
 
-	opts := Options{Iterations: 500, Threads: 4, TargetError: 0.5}
+	opts := Options{Iterations: 500, Threads: 4, TargetError: 0.5, ScaleFactors: true}
 	if err := Run(context.Background(), sim, "char.simc", "out.json", opts, &progress); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	got := strings.TrimSpace(progress.String())
-	want := "char.simc json2=out.json iterations=500 threads=4 target_error=0.5"
+	want := "char.simc json2=out.json iterations=500 threads=4 target_error=0.5 calculate_scale_factors=1"
 	if got != want {
 		t.Errorf("simc argv:\n got %q\nwant %q", got, want)
 	}

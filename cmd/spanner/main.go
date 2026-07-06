@@ -28,6 +28,7 @@ const usage = `usage:
   spanner sim (-profile <file.simc> | -import <export.txt|-> | -char <name>)
               [-simc <path>] [-iterations N] [-threads N] [-target-error PCT]
               [-out DIR] [-open=false]
+  spanner weights (same flags as sim)                 compute stat weights (slower: one sim per stat)
   spanner compare (-profile|-import|-char as above) -vs "Label=override[;override...]"
               [-vs ...] [sim flags]                   rank variations against the baseline
   spanner char save <name> [-import <export.txt|->]   save a character (default: stdin)
@@ -40,7 +41,9 @@ func main() {
 	var err error
 	switch {
 	case len(os.Args) >= 2 && os.Args[1] == "sim":
-		err = runSim(os.Args[2:])
+		err = runSim(os.Args[2:], false)
+	case len(os.Args) >= 2 && os.Args[1] == "weights":
+		err = runSim(os.Args[2:], true)
 	case len(os.Args) >= 2 && os.Args[1] == "compare":
 		err = runCompare(os.Args[2:])
 	case len(os.Args) >= 2 && os.Args[1] == "char":
@@ -153,7 +156,7 @@ func runForge(args []string) error {
 	}
 }
 
-func runSim(args []string) error {
+func runSim(args []string, scaleFactors bool) error {
 	fs := flag.NewFlagSet("sim", flag.ExitOnError)
 	simcFlag := fs.String("simc", "", "path to the simc binary (default: $"+forge.EnvVar+", then PATH)")
 	profileFlag := fs.String("profile", "", "path to a .simc profile")
@@ -173,9 +176,35 @@ func runSim(args []string) error {
 	}
 	defer input.cleanup()
 
-	opts := crank.Options{Iterations: *iterations, Threads: *threads, TargetError: *targetError}
-	_, err = executeSim(input, *simcFlag, opts, *outDir, *openReport)
-	return err
+	opts := crank.Options{Iterations: *iterations, Threads: *threads, TargetError: *targetError, ScaleFactors: scaleFactors}
+	rep, err := executeSim(input, *simcFlag, opts, *outDir, *openReport)
+	if err != nil {
+		return err
+	}
+	if scaleFactors {
+		printWeights(rep)
+	}
+	return nil
+}
+
+// printWeights mirrors the report's stat weights on stdout, best first.
+func printWeights(rep *gauge.Report) {
+	factors := rep.Sim.Players[0].ScaleFactors
+	if len(factors) == 0 {
+		fmt.Println("simc returned no scale factors")
+		return
+	}
+	stats := make([]string, 0, len(factors))
+	for s := range factors {
+		stats = append(stats, s)
+	}
+	sort.Slice(stats, func(i, j int) bool { return factors[stats[i]] > factors[stats[j]] })
+	w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
+	_, _ = fmt.Fprintln(w, "STAT\tDPS PER POINT")
+	for _, s := range stats {
+		_, _ = fmt.Fprintf(w, "%s\t%.2f\n", s, factors[s])
+	}
+	_ = w.Flush()
 }
 
 // executeSim runs the shared pipeline: locate simc, run it, parse the json2

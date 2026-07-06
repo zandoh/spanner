@@ -21,6 +21,9 @@ type Options struct {
 	Iterations  int
 	Threads     int
 	TargetError float64
+	// ScaleFactors makes SimC compute stat weights — one extra sim per
+	// stat, so runs take several times longer.
+	ScaleFactors bool
 }
 
 // Run executes simc on the profile at profilePath, writing the json2 report
@@ -36,6 +39,9 @@ func Run(ctx context.Context, simcPath, profilePath, jsonPath string, opts Optio
 	}
 	if opts.TargetError > 0 {
 		args = append(args, fmt.Sprintf("target_error=%g", opts.TargetError))
+	}
+	if opts.ScaleFactors {
+		args = append(args, "calculate_scale_factors=1")
 	}
 
 	cmd := exec.CommandContext(ctx, simcPath, args...) // #nosec G204 -- running the user's own simc binary on their profile is the product
