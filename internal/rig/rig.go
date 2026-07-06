@@ -91,7 +91,7 @@ func Run(ctx context.Context, job Job) (*Result, error) {
 	}
 	if err := appendIndex(job.OutDir, entry); err != nil {
 		// History is a convenience; the run itself succeeded.
-		fmt.Fprintf(progress, "⚙ spanner: could not record run history: %v\n", err)
+		_, _ = fmt.Fprintf(progress, "⚙ spanner: could not record run history: %v\n", err)
 	}
 
 	return &Result{Report: rep, HTMLPath: htmlPath, JSONPath: jsonPath}, nil

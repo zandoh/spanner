@@ -24,45 +24,49 @@ One Go core, thin clients on top:
 | `internal/blueprint` | Render the internal model as a self-contained HTML report |
 | `cmd/spanner` | The terminal client |
 
-## Quick start
-
-Requires Go. On macOS, spanner fetches SimulationCraft for you; elsewhere,
-grab a [nightly](http://downloads.simulationcraft.org/nightly/) (Windows) or
-build from source (Linux).
+## Install
 
 ```sh
-make build
+brew install zandoh/tap/spanner        # macOS / Linux
+```
 
-# install/refresh the simc nightly (macOS; run again after game patches)
-./bin/spanner forge update
+or grab a binary from [releases](https://github.com/zandoh/spanner/releases)
+(Windows/Linux/macOS, amd64 + arm64). On macOS and Windows, spanner fetches
+SimulationCraft for you (`spanner forge update`); on Linux, build simc
+[from source](https://github.com/simulationcraft/simc) and put it on PATH.
 
-# from a /simc addon export (type /simc in-game, copy, paste into a file — or pipe it)
-./bin/spanner sim -import mychar.txt
-pbpaste | ./bin/spanner sim -import -
+## Quick start
 
-# or from a .simc profile file
-./bin/spanner sim -profile mychar.simc
+```sh
+spanner forge update                   # install/refresh the simc nightly (rerun after game patches)
+pbpaste | spanner char save zandy      # save your /simc export once (type /simc in-game, copy)
+spanner sim -char zandy                # sim → report opens in browser
+spanner serve                          # or use the local web workbench
+```
 
-# save characters so you never paste twice
-pbpaste | ./bin/spanner char save zandy
-./bin/spanner sim -char zandy
-./bin/spanner char list
+More tools:
 
-# rank gear/talent variations against your current setup
-./bin/spanner compare -char zandy \
+```sh
+pbpaste | spanner sim -import -        # one-off sim straight from the clipboard
+spanner weights -char zandy            # stat weights (slower: one sim per stat)
+spanner runs                           # past runs, newest first
+spanner compare -char zandy \
   -vs "Crafted boots=feet=,id=219911" \
-  -vs "New talents=talents=CoPAAAA..."
+  -vs "New talents=talents=CoPAAAA..."  # rank variations against your setup
 ```
 
 Binary resolution order: `-simc` flag → `SPANNER_SIMC` env → newest cached
-nightly (`spanner forge which` shows it) → `PATH`. The report lands in
-`./reports/` and opens in your browser.
+nightly (`spanner forge which` shows it) → `PATH`. Reports land in
+`./reports/`.
 
 ## Development
 
+Requires Go.
+
 ```sh
-make tools   # install goimports, staticcheck, govulncheck, gosec
-make check   # fmt-check + vet + lint + security scans + tests
+make build   # → bin/spanner
+make tools   # install goimports, golangci-lint, govulncheck
+make check   # fmt-check + vet + lint (staticcheck/gosec/depguard) + vuln scan + tests
 ```
 
 CI runs the same `make check` on every push.
